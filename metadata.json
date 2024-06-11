@@ -1,0 +1,7 @@
+{
+  "name": "Better Wordle",
+  "description": "A kawaii, conversational Wordle game with AI-powered hints and voice interaction.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
