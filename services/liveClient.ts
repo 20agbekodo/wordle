@@ -1,6 +1,7 @@
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SYSTEM_INSTRUCTION_LIVE_BOY, SYSTEM_INSTRUCTION_LIVE_GIRL } from "../constants";
 import { CharacterType } from "../types";
+import { getStoredApiKey, isAuthOrRateLimitError, clearStoredApiKey } from "./apiKeyService";
 
 let session: any = null;
 let inputAudioContext: AudioContext | null = null;
@@ -9,14 +10,6 @@ let inputSource: MediaStreamAudioSourceNode | null = null;
 let processor: ScriptProcessorNode | null = null;
 let nextStartTime = 0;
 const sources = new Set<AudioBufferSourceNode>();
-
-const getApiKey = () => {
-  try {
-    return process.env.API_KEY || '';
-  } catch (e) {
-    return '';
-  }
-};
 
 export const disconnectLiveSession = async () => {
   if (session) {
@@ -115,7 +108,7 @@ export const connectLiveSession = async (
 ) => {
   await disconnectLiveSession();
 
-  const apiKey = getApiKey();
+  const apiKey = getStoredApiKey();
   if (!apiKey) {
     console.error("No API Key found");
     onDisconnect();
@@ -212,6 +205,7 @@ export const connectLiveSession = async (
       },
       onerror: (e) => {
         console.error("Live API Error", e);
+        if (isAuthOrRateLimitError(e)) clearStoredApiKey();
         onDisconnect();
       }
     },

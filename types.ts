@@ -11,11 +11,14 @@ export interface GameState {
   guesses: string[];
   status: 'playing' | 'won' | 'lost';
   hints: Hint[];
+  difficulty: 1 | 2 | 3;
+  context?: string;
 }
 
 export interface CustomGameData {
   word: string;
   hint: string;
+  context?: string;
 }
 
 export enum GameMode {

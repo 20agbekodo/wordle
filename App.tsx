@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, MessageCircle, Play, Mic, Volume2, RotateCcw, Copy, Check, Heart, Coffee, Star, Moon, Sun } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Play, Mic, Volume2, RotateCcw, Copy, Check, Heart, Coffee, Star, Moon, Sun, KeyRound } from 'lucide-react';
+import { validateApiKey, getStoredApiKey, setStoredApiKey, clearStoredApiKey } from './services/apiKeyService';
 import { GameMode, GameState, CustomGameData, CharacterType } from './types';
 import { generateQuickGame, generateHint } from './services/geminiService';
 import { connectLiveSession, disconnectLiveSession } from './services/liveClient';
@@ -31,21 +32,91 @@ const Confetti = () => {
   );
 };
 
+const ApiKeyModal: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
+  const [key, setKey] = useState('');
+  const [status, setStatus] = useState<'idle' | 'checking' | 'success' | 'error'>('idle');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = key.trim();
+    if (!trimmed) return;
+    setStatus('checking');
+    const valid = await validateApiKey(trimmed);
+    if (valid) {
+      setStoredApiKey(trimmed);
+      setStatus('success');
+      setTimeout(onSuccess, 1200);
+    } else {
+      setStatus('error');
+    }
+  };
+
+  return (
+    <div className="fixed inset-x-0 top-0 z-[300] flex justify-center animate-slide-down">
+      <div className="w-full max-w-lg mx-4 bg-white dark:bg-zinc-900 rounded-b-3xl shadow-2xl border-b-4 border-x-4 border-pink-500 dark:border-pink-700 p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <KeyRound size={18} className="text-pink-500 flex-shrink-0" />
+          <h2 className="text-lg font-bold text-pink-500">Gemini API Key Required</h2>
+        </div>
+        <p className="text-sm text-stone-600 dark:text-zinc-400 mb-3">
+          This app uses Google Gemini AI for hints and voice chat.{' '}
+          <a
+            href="https://aistudio.google.com/api-keys"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-pink-500 underline hover:text-pink-600 font-medium"
+          >
+            Get a free key here
+          </a>
+          {' '}— no credit card needed, takes 30 seconds.
+        </p>
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <input
+            type="password"
+            value={key}
+            onChange={e => setKey(e.target.value)}
+            placeholder="AIzaSy..."
+            autoComplete="off"
+            disabled={status === 'checking' || status === 'success'}
+            className="flex-1 bg-stone-50 dark:bg-black border-2 border-stone-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-sm font-mono text-stone-900 dark:text-white focus:outline-none focus:border-pink-500 disabled:opacity-60"
+          />
+          <button
+            type="submit"
+            disabled={!key.trim() || status === 'checking' || status === 'success'}
+            className="bg-pink-700 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-[0_3px_0_rgb(190,24,93)] active:shadow-none active:translate-y-[3px] transition-all disabled:opacity-50 hover:bg-pink-600 whitespace-nowrap"
+          >
+            {status === 'checking' ? '...' : 'Verify & Save'}
+          </button>
+        </form>
+        {status === 'success' && (
+          <p className="mt-2 text-sm text-green-600 dark:text-green-400 font-semibold">✓ Key is working — you're all set!</p>
+        )}
+        {status === 'error' && (
+          <p className="mt-2 text-sm text-red-500 font-medium">That key didn't work. Double-check it and try again.</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   const [mode, setMode] = useState<GameMode>(GameMode.MENU);
   const [gameState, setGameState] = useState<GameState>({
     word: '',
     guesses: [],
     status: 'playing',
-    hints: []
+    hints: [],
+    difficulty: 2,
   });
   const [currentGuess, setCurrentGuess] = useState('');
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  // Custom Game Form
+  // Difficulty & Custom Game Form
+  const [difficulty, setDifficulty] = useState<1 | 2 | 3>(2);
   const [customWord, setCustomWord] = useState('');
   const [customHint, setCustomHint] = useState('');
+  const [customContext, setCustomContext] = useState('');
   const [showCopyToast, setShowCopyToast] = useState(false);
 
   // Copy Feedback States
@@ -59,6 +130,25 @@ export default function App() {
   // Easter Egg State
   const [showEasterEggIntro, setShowEasterEggIntro] = useState(false);
   const [showEasterEggFinal, setShowEasterEggFinal] = useState(false);
+
+  // API Key State
+  const [apiKeyValid, setApiKeyValid] = useState<boolean | null>(null);
+
+  const validateStoredKey = async () => {
+    const key = getStoredApiKey();
+    if (!key) { setApiKeyValid(false); return; }
+    const valid = await validateApiKey(key);
+    setApiKeyValid(valid);
+    if (!valid) clearStoredApiKey();
+  };
+
+  useEffect(() => { validateStoredKey(); }, []);
+
+  useEffect(() => {
+    const handler = () => setApiKeyValid(false);
+    window.addEventListener('apikey-cleared', handler);
+    return () => window.removeEventListener('apikey-cleared', handler);
+  }, []);
 
   // Theme State
   const [isDark, setIsDark] = useState(false);
@@ -77,7 +167,7 @@ export default function App() {
       try {
         const dataStr = hash.replace('#custom=', '');
         const data: CustomGameData = JSON.parse(atob(dataStr));
-        setTimeout(() => startCustomGame(data.word, data.hint), 100);
+        setTimeout(() => startCustomGame(data.word, data.hint, data.context), 100);
       } catch (e) {
         console.error("Invalid game link");
         window.location.hash = '';
@@ -110,18 +200,20 @@ export default function App() {
     }
   }, [gameState.status]);
 
-  const generateGameLink = (word: string, hint: string) => {
-    const data: CustomGameData = { word, hint };
+  const generateGameLink = (word: string, hint: string, context?: string) => {
+    const data: CustomGameData = { word, hint, ...(context ? { context } : {}) };
     const hash = btoa(JSON.stringify(data));
     return `${window.location.origin}${window.location.pathname}#custom=${hash}`;
   };
 
-  const startCustomGame = (word: string, hint: string) => {
+  const startCustomGame = (word: string, hint: string, context?: string) => {
     setGameState({
       word: word.toUpperCase(),
       guesses: [],
       status: 'playing',
-      hints: [{ text: hint, sender: 'girl', timestamp: Date.now() }]
+      hints: [{ text: hint, sender: 'girl', timestamp: Date.now() }],
+      difficulty,
+      context: context || undefined,
     });
     setMode(GameMode.PLAYING);
     setShowEasterEggIntro(false);
@@ -131,7 +223,7 @@ export default function App() {
   const handleQuickPlay = async () => {
     setLoading(true);
     try {
-      const data = await generateQuickGame();
+      const data = await generateQuickGame(difficulty);
       startCustomGame(data.word, data.hint);
     } catch (e) {
       alert("Oops! AI is sleepy. Try again.");
@@ -144,18 +236,19 @@ export default function App() {
     setMode(GameMode.SETUP);
     setCustomWord('');
     setCustomHint('');
+    setCustomContext('');
   };
 
   const canSubmitCustom = customWord.length >= 4 && customWord.length <= 10 && customHint.trim().length > 0;
 
   const handlePlayNowCustom = () => {
     if (!canSubmitCustom) return;
-    startCustomGame(customWord, customHint);
+    startCustomGame(customWord, customHint, customContext.trim() || undefined);
   };
 
   const handleCopyLinkCustom = () => {
     if (!canSubmitCustom) return;
-    const link = generateGameLink(customWord, customHint);
+    const link = generateGameLink(customWord, customHint, customContext.trim() || undefined);
     navigator.clipboard.writeText(link);
     setShowCopyToast(true);
     setTimeout(() => setShowCopyToast(false), 2000);
@@ -163,13 +256,13 @@ export default function App() {
 
   const handleReplay = () => {
     if (gameState.word && gameState.hints.length > 0) {
-      startCustomGame(gameState.word, gameState.hints[0].text);
+      startCustomGame(gameState.word, gameState.hints[0].text, gameState.context);
     }
   };
 
   const copyLinkToClipboard = (successSetter: (v: boolean) => void) => {
     if (gameState.word && gameState.hints.length > 0) {
-        const link = generateGameLink(gameState.word, gameState.hints[0].text);
+        const link = generateGameLink(gameState.word, gameState.hints[0].text, gameState.context);
         navigator.clipboard.writeText(link);
         successSetter(true);
         setTimeout(() => successSetter(false), 2000);
@@ -227,7 +320,7 @@ export default function App() {
     setLoading(true);
     try {
         await new Promise(r => setTimeout(r, 500));
-        const text = await generateHint(gameState.word, gameState.hints, nextSender);
+        const text = await generateHint(gameState.word, gameState.hints, nextSender, gameState.difficulty, gameState.context);
         setGameState(prev => ({
         ...prev,
         hints: [...prev.hints, { text, sender: nextSender, timestamp: Date.now() }]
@@ -268,6 +361,7 @@ export default function App() {
   if (mode === GameMode.MENU) {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-black flex flex-col items-center justify-center p-4 relative">
+        {apiKeyValid === false && <ApiKeyModal onSuccess={() => setApiKeyValid(true)} />}
         <div className="flex gap-4 mb-8">
           <VideoCharacter src={VIDEO_PATHS.inLoveGirl} className="w-32 h-32 sm:w-48 sm:h-48" />
           <VideoCharacter src={VIDEO_PATHS.inLoveBoy} className="w-32 h-32 sm:w-48 sm:h-48" />
@@ -275,8 +369,23 @@ export default function App() {
         <h1 className="text-4xl font-bold text-pink-500 mb-2">Better Wordle</h1>
         <p className="text-pink-600 dark:text-pink-300 mb-8 font-medium">The wordle game you deserve, babe</p>
         <div className="flex flex-col gap-4 w-full max-w-xs">
-          <button 
-            onClick={handleQuickPlay} 
+          <div className="flex gap-2 w-full">
+            {([1, 2, 3] as const).map(level => (
+              <button
+                key={level}
+                onClick={() => setDifficulty(level)}
+                className={`flex-1 py-2 rounded-xl font-bold text-sm transition-all border-2 ${
+                  difficulty === level
+                    ? 'bg-pink-700 text-white border-pink-700 shadow-[0_3px_0_rgb(190,24,93)]'
+                    : 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400 border-stone-300 dark:border-zinc-700 hover:border-pink-400 hover:text-pink-500'
+                }`}
+              >
+                {level === 1 ? '🍼 Baby' : level === 2 ? '🤔 Mid' : '💀 Smart-ass'}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={handleQuickPlay}
             disabled={loading}
             className="flex items-center justify-center gap-2 bg-pink-700 text-white p-4 rounded-xl font-bold shadow-[0_4px_0_rgb(190,24,93)] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50 hover:bg-pink-600"
           >
@@ -329,6 +438,37 @@ export default function App() {
                 placeholder="What makes the world go round?"
               />
             </div>
+            <div>
+              <label className="block text-pink-600 dark:text-pink-300 font-bold mb-1 text-sm">
+                CONTEXT <span className="text-stone-400 dark:text-zinc-500 font-normal">(secret — only the AI sees this)</span>
+              </label>
+              <textarea
+                value={customContext}
+                onChange={e => setCustomContext(e.target.value)}
+                rows={2}
+                className="w-full bg-stone-50 dark:bg-black border-2 border-stone-300 dark:border-zinc-700 rounded-xl p-3 text-sm text-stone-900 dark:text-white focus:outline-none focus:border-pink-500 resize-none"
+                placeholder="e.g. It's the name of my cat, hint at the sound it makes"
+              />
+            </div>
+            <div>
+              <label className="block text-pink-600 dark:text-pink-300 font-bold mb-2 text-sm">DIFFICULTY</label>
+              <div className="flex gap-2">
+                {([1, 2, 3] as const).map(level => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setDifficulty(level)}
+                    className={`flex-1 py-2 rounded-xl font-bold text-sm transition-all border-2 ${
+                      difficulty === level
+                        ? 'bg-pink-700 text-white border-pink-700 shadow-[0_3px_0_rgb(190,24,93)]'
+                        : 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400 border-stone-300 dark:border-zinc-700 hover:border-pink-400 hover:text-pink-500'
+                    }`}
+                  >
+                    {level === 1 ? '🍼 Baby' : level === 2 ? '🤔 Mid' : '💀 Smart-ass'}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="flex gap-3 pt-2">
                 <button 
                   onClick={handlePlayNowCustom}
@@ -364,6 +504,7 @@ export default function App() {
 
   return (
     <div className="h-screen bg-stone-50 dark:bg-black flex flex-col relative overflow-hidden">
+      {apiKeyValid === false && <ApiKeyModal onSuccess={() => setApiKeyValid(true)} />}
       {/* Header / Character Area */}
       <div className="flex-none bg-white dark:bg-zinc-900 p-2 pb-4 rounded-b-[2.5rem] shadow-lg shadow-stone-200 dark:shadow-black relative z-10 border-b border-stone-200 dark:border-zinc-800">
         <div className="flex justify-between items-center px-4 mb-2">
