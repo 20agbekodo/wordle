@@ -1,20 +1,32 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Better Wordle
 
-# Run and deploy your AI Studio app
+A Wordle game with AI-powered hints, voice chat, and a custom game creator — built for people who want more than a daily puzzle.
 
-This contains everything you need to run your app locally.
+## Features
 
-View your app in AI Studio: https://ai.studio/apps/drive/1Yemg5JLtgaG6bM2km-zXCKx9B-Q00exr
+- **Quick Play** — AI picks a word and generates a first hint matched to your chosen difficulty
+- **Custom Games** — Set your own word, write the first hint, add a secret context the AI uses to tailor its clues, then share a link with anyone
+- **Difficulty levels** — Baby, Mid, or Smart-ass: the AI goes from warm and obvious to cryptic and philosophical
+- **AI hint chat** — Request more hints mid-game; the AI alternates between two characters and never repeats itself
+- **Voice chat** — Talk live with either character using the Gemini Live API
+- **Dark / light mode** — Offwhite light theme, slate dark theme, toggled per session
+- **Easter egg** — Find the right word
 
-## Run Locally
+## Stack
 
-**Prerequisites:**  Node.js
+- **React 19** + **TypeScript**
+- **Vite** — dev server and build
+- **Tailwind CSS** (CDN) — styling and dark mode via `class` strategy
+- **Google Gemini API** (`@google/genai`) — hint generation and live voice sessions
+- **Lucide React** — icons
 
+## Run locally
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+**Prerequisites:** Node.js
+
+```bash
+npm install
+npm run dev
+```
+
+On first launch, the app will ask for a Gemini API key. Get one free at [aistudio.google.com/api-keys](https://aistudio.google.com/api-keys) — no credit card, takes 30 seconds. The key is stored in `localStorage` and only re-prompted if it expires or hits quota.
