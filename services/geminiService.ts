@@ -18,7 +18,7 @@ const DIFFICULTY_HINT_INSTRUCTION: Record<number, string> = {
 
 export const generateQuickGame = async (difficulty: 1 | 2 | 3 = 2): Promise<{ word: string; hint: string }> => {
   const apiKey = getStoredApiKey();
-  if (!apiKey) return { word: "VIBES", hint: "It's all about the energy, babe!" };
+  if (!apiKey) return { word: "VIBES", hint: "It's all about the energy, omg!" };
 
   const wordComplexity =
     difficulty === 1
@@ -51,14 +51,14 @@ export const generateQuickGame = async (difficulty: 1 | 2 | 3 = 2): Promise<{ wo
     const data = JSON.parse(text);
 
     if (!data?.word || (data.word.length !== 5 && data.word.length !== 6)) {
-      return { word: "VIBES", hint: "It's all about the energy, babe!" };
+      return { word: "VIBES", hint: "It's all about the energy, omg!" };
     }
 
     return data;
   } catch (error) {
     if (isAuthOrRateLimitError(error)) clearStoredApiKey();
     console.error("Error generating game:", error);
-    return { word: "VIBES", hint: "It's all about the energy, babe!" };
+    return { word: "VIBES", hint: "It's all about the energy, omg!" };
   }
 };
 
@@ -70,7 +70,7 @@ export const generateHint = async (
   context?: string
 ): Promise<string> => {
   const apiKey = getStoredApiKey();
-  if (!apiKey) return "Let me tell you something babe...";
+  if (!apiKey) return "Let me tell you something...";
 
   const ai = new GoogleGenAI({ apiKey });
   const conversationHistory = history.map(h => `${h.sender.toUpperCase()}: ${h.text}`).join('\n');
@@ -94,7 +94,7 @@ ${conversationHistory}
 
 Current turn: ${nextSpeaker.toUpperCase()}.
 Generate a single short sentence (max 20 words) as the ${nextSpeaker}.
-Talk to the other character using pet names. Do NOT reveal the word. Follow the difficulty instruction strictly.
+Talk to the other character in a cute, kawaii way. Do NOT reveal the word. Follow the difficulty instruction strictly.
   `.trim();
 
   try {
@@ -113,6 +113,6 @@ Talk to the other character using pet names. Do NOT reveal the word. Follow the 
   } catch (error) {
     if (isAuthOrRateLimitError(error)) clearStoredApiKey();
     console.error("Error generating hint:", error);
-    return "Let me tell you something babe...";
+    return "Let me tell you something...";
   }
 };

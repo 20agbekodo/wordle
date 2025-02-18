@@ -367,7 +367,7 @@ export default function App() {
           <VideoCharacter src={VIDEO_PATHS.inLoveBoy} className="w-32 h-32 sm:w-48 sm:h-48" />
         </div>
         <h1 className="text-4xl font-bold text-pink-500 mb-2">Better Wordle</h1>
-        <p className="text-pink-600 dark:text-pink-300 mb-8 font-medium">The wordle game you deserve, babe</p>
+        <p className="text-pink-600 dark:text-pink-300 mb-8 font-medium">The wordle game you deserve ✨</p>
         <div className="flex flex-col gap-4 w-full max-w-xs">
           <div className="flex gap-2 w-full">
             {([1, 2, 3] as const).map(level => (
@@ -601,7 +601,7 @@ export default function App() {
           <div className="flex flex-col items-center gap-8">
             <h2 className="text-4xl font-black text-pink-500 animate-spin-slow">SURPRISE INCOMING!</h2>
             <div className="text-6xl animate-bounce-crazy">🎁✨💖</div>
-            <p className="text-stone-900 dark:text-white text-xl animate-pulse">Wait for it, babe...</p>
+            <p className="text-stone-900 dark:text-white text-xl animate-pulse">Wait for it...</p>
           </div>
           <style dangerouslySetInnerHTML={{ __html: `
             @keyframes spin-slow {
@@ -633,7 +633,7 @@ export default function App() {
             </div>
             
             <h2 className="text-4xl sm:text-5xl font-black text-pink-500 mb-6 leading-tight">
-              Yeah babe here's your Christmas gift
+              Yeah girl here's your Christmas gift
             </h2>
             
             <div className="text-left text-stone-800 dark:text-zinc-100 text-lg leading-relaxed space-y-4 mb-10 font-medium">
@@ -647,7 +647,7 @@ export default function App() {
                 So let's go to a Nespresso store in NYC ❤️💕💖✨ when I pull up to taste ALL OF THEM ALL AT ONCE and we'll choose the best one for you, so you can really awaken your expertise of good coffee. That's what you deserve baby I love you so much!!
               </p>
                <p>
-                Or maybe Nespresso is not the best kind of Espresso maker, how would I know this is a total new world for me!! But I'm not losing hope, whatever you want I'll get you because you're my coffee-loving-baby baby!!
+                Or maybe Nespresso is not the best kind of Espresso maker, how would I know this is a total new world for me!! But I'm not losing hope, whatever you want I'll get you because you're my coffee-loving girl!!
               </p>
             </div>
 
@@ -658,7 +658,7 @@ export default function App() {
               }}
               className="w-full bg-pink-700 text-white py-5 rounded-2xl font-black text-xl shadow-[0_6px_0_rgb(190,24,93)] active:translate-y-[6px] active:shadow-none transition-all hover:bg-pink-600"
             >
-              I LOVE YOU BABE (CLICK TO SAY YOU LOVE ME BACK NOW)!
+              I LOVE YOU (CLICK TO SAY YOU LOVE ME BACK NOW)!
             </button>
           </div>
         </div>
@@ -679,7 +679,7 @@ export default function App() {
                 )}
              </div>
              <h2 className={`text-3xl font-bold mb-2 ${gameState.status === 'won' ? 'text-pink-500 dark:text-pink-400' : 'text-stone-500 dark:text-zinc-400'}`}>
-               {gameState.status === 'won' ? "You did it, Babe!" : "Oh no, Honey!"}
+               {gameState.status === 'won' ? "You did it omg!!" : "Oh no... 😭"}
              </h2>
              <p className="text-stone-500 dark:text-zinc-400 mb-6">
                The word was <span className="font-bold text-stone-900 dark:text-white">{gameState.word}</span>. 
