@@ -151,7 +151,7 @@ export default function App() {
   }, []);
 
   // Theme State
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(true);
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add('dark');
