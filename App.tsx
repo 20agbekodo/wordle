@@ -10,6 +10,50 @@ import { VideoCharacter } from './components/VideoCharacter';
 import { Keyboard } from './components/Keyboard';
 import { WordleBoard } from './components/WordleBoard';
 
+type TileState = 'correct' | 'wrong-place' | 'wrong';
+
+const TITLE_TILES: { char: string; state: TileState }[][] = [
+  [
+    { char: 'B', state: 'wrong' },
+    { char: 'E', state: 'correct' },
+    { char: 'T', state: 'wrong-place' },
+    { char: 'T', state: 'correct' },
+    { char: 'E', state: 'wrong-place' },
+    { char: 'R', state: 'wrong' },
+  ],
+  [
+    { char: 'W', state: 'correct' },
+    { char: 'O', state: 'wrong-place' },
+    { char: 'R', state: 'wrong' },
+    { char: 'D', state: 'correct' },
+    { char: 'L', state: 'wrong-place' },
+    { char: 'E', state: 'correct' },
+  ],
+];
+
+const TILE_CLASSES: Record<TileState, string> = {
+  correct: 'bg-green-700 text-white border-green-900',
+  'wrong-place': 'bg-yellow-700 text-white border-yellow-900',
+  wrong: 'bg-stone-200 dark:bg-zinc-900 text-stone-500 dark:text-slate-500 border-stone-300 dark:border-black',
+};
+
+const TitleTiles: React.FC = () => (
+  <div className="flex flex-col gap-1.5 mb-6">
+    {TITLE_TILES.map((row, ri) => (
+      <div key={ri} className="flex gap-1.5">
+        {row.map(({ char, state }, ci) => (
+          <div
+            key={ci}
+            className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-lg sm:text-xl font-extrabold rounded-lg border-2 uppercase ${TILE_CLASSES[state]}`}
+          >
+            {char}
+          </div>
+        ))}
+      </div>
+    ))}
+  </div>
+);
+
 // Simple Confetti Component
 const Confetti = () => {
   const pieces = Array.from({ length: 50 });
@@ -362,11 +406,11 @@ export default function App() {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-black flex flex-col items-center justify-center p-4 relative">
         {apiKeyValid === false && <ApiKeyModal onSuccess={() => setApiKeyValid(true)} />}
+        <TitleTiles />
         <div className="flex gap-4 mb-8">
           <VideoCharacter src={VIDEO_PATHS.inLoveGirl} className="w-32 h-32 sm:w-48 sm:h-48" />
           <VideoCharacter src={VIDEO_PATHS.inLoveBoy} className="w-32 h-32 sm:w-48 sm:h-48" />
         </div>
-        <h1 className="text-4xl font-bold text-pink-500 mb-2">Better Wordle</h1>
         <p className="text-pink-600 dark:text-pink-300 mb-8 font-medium">The wordle game you deserve ✨</p>
         <div className="flex flex-col gap-4 w-full max-w-xs">
           <div className="flex gap-2 w-full">
