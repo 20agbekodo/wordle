@@ -402,8 +402,25 @@ export default function App() {
     return char === 'girl' ? VIDEO_PATHS.normalGirl : VIDEO_PATHS.normalBoy;
   };
 
+  const coffeeLink = (
+    <a
+      href="https://www.buymeacoffee.com/josueagbekodo"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="fixed top-3 right-3 z-[200]"
+    >
+      <img
+        src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+        alt="Buy Me A Coffee"
+        className="h-10 w-auto"
+      />
+    </a>
+  );
+
   if (mode === GameMode.MENU) {
     return (
+      <>
+      {coffeeLink}
       <div className="min-h-screen bg-stone-50 dark:bg-black flex flex-col items-center justify-center p-4 relative">
         {apiKeyValid === false && <ApiKeyModal onSuccess={() => setApiKeyValid(true)} />}
         <TitleTiles />
@@ -444,16 +461,19 @@ export default function App() {
         </div>
         <button
           onClick={() => setIsDark(!isDark)}
-          className="absolute top-3 right-3 p-2.5 rounded-full bg-stone-200 dark:bg-zinc-800 text-stone-600 dark:text-zinc-300 hover:bg-stone-300 dark:hover:bg-zinc-700 transition-colors border border-stone-300 dark:border-zinc-600 shadow-sm"
+          className="absolute top-3 right-44 p-2.5 rounded-full bg-stone-200 dark:bg-zinc-800 text-stone-600 dark:text-zinc-300 hover:bg-stone-300 dark:hover:bg-zinc-700 transition-colors border border-stone-300 dark:border-zinc-600 shadow-sm"
         >
           {isDark ? <Sun size={20} /> : <Moon size={20} />}
         </button>
       </div>
+      </>
     );
   }
 
   if (mode === GameMode.SETUP) {
     return (
+      <>
+      {coffeeLink}
       <div className="min-h-screen bg-stone-50 dark:bg-black flex flex-col items-center justify-center p-4 relative">
         <button onClick={() => setMode(GameMode.MENU)} className="absolute top-4 left-4 text-pink-400 hover:text-pink-300">
           <ArrowLeft size={32} />
@@ -534,11 +554,12 @@ export default function App() {
         </div>
         <button
           onClick={() => setIsDark(!isDark)}
-          className="absolute top-3 right-3 p-2.5 rounded-full bg-stone-200 dark:bg-zinc-800 text-stone-600 dark:text-zinc-300 hover:bg-stone-300 dark:hover:bg-zinc-700 transition-colors border border-stone-300 dark:border-zinc-600 shadow-sm"
+          className="absolute top-3 right-44 p-2.5 rounded-full bg-stone-200 dark:bg-zinc-800 text-stone-600 dark:text-zinc-300 hover:bg-stone-300 dark:hover:bg-zinc-700 transition-colors border border-stone-300 dark:border-zinc-600 shadow-sm"
         >
           {isDark ? <Sun size={20} /> : <Moon size={20} />}
         </button>
       </div>
+      </>
     );
   }
 
@@ -547,6 +568,8 @@ export default function App() {
   const isNespressoWin = gameState.status === 'won' && gameState.word === 'NESPRESSO';
 
   return (
+    <>
+    {coffeeLink}
     <div className="h-screen bg-stone-50 dark:bg-black flex flex-col relative overflow-hidden">
       {apiKeyValid === false && <ApiKeyModal onSuccess={() => setApiKeyValid(true)} />}
       {/* Header / Character Area */}
@@ -558,9 +581,7 @@ export default function App() {
            <button onClick={() => setIsDark(!isDark)} className="p-2 rounded-full bg-stone-200 dark:bg-zinc-800 text-stone-600 dark:text-zinc-300 hover:bg-stone-300 dark:hover:bg-zinc-700 transition-colors border border-stone-300 dark:border-zinc-600">
              {isDark ? <Sun size={20} /> : <Moon size={20} />}
            </button>
-           <button onClick={() => copyLinkToClipboard(setHeaderCopySuccess)} className="text-pink-400 hover:text-pink-300 transition-colors">
-             {headerCopySuccess ? <Check size={24} className="text-green-500" /> : <Copy size={24} />}
-           </button>
+           <div className="w-10" />
         </div>
         <div className="flex justify-between items-end max-w-lg mx-auto pl-2 pr-[84px] sm:justify-center sm:gap-16 sm:px-0">
           <div className="relative cursor-pointer group flex-shrink-0" onClick={() => toggleLiveSession('girl')}>
@@ -752,5 +773,6 @@ export default function App() {
         .animate-confetti { animation: confetti linear infinite; }
       `}} />
     </div>
+    </>
   );
 }
