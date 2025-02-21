@@ -2,7 +2,7 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Better Wordle</title>
     <link rel="icon" type="image/png" href="/favicon.png" />
     <script src="https://cdn.tailwindcss.com"></script>
@@ -21,15 +21,38 @@
       .dark .kawaii-scroll::-webkit-scrollbar-track {
         background: #0f172a;
       }
+      .kawaii-scroll::-webkit-scrollbar-thumb {
+        background: #db2777;
+        border-radius: 4px;
+      }
+
+      /* Safe area insets for notched/gesture-bar devices */
+      .pb-safe-bottom {
+        padding-bottom: max(8px, env(safe-area-inset-bottom));
+      }
+      .pt-safe-top {
+        padding-top: max(8px, env(safe-area-inset-top));
+      }
+
+      /* Animations */
       @keyframes slide-down {
         from { transform: translateY(-110%); opacity: 0; }
         to { transform: translateY(0); opacity: 1; }
       }
       .animate-slide-down { animation: slide-down 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
-      .kawaii-scroll::-webkit-scrollbar-thumb {
-        background: #db2777; 
-        border-radius: 4px;
+
+      @keyframes slide-in-right {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
       }
+      .animate-slide-in-right { animation: slide-in-right 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+
+      @keyframes bounce-in {
+        0%   { transform: scale(0.6); opacity: 0; }
+        70%  { transform: scale(1.05); }
+        100% { transform: scale(1); opacity: 1; }
+      }
+      .animate-bounce-in { animation: bounce-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
     </style>
   <script type="importmap">
 {
