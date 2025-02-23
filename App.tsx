@@ -627,7 +627,33 @@ export default function App() {
 
   return (
     <>
-      {coffeeLink}
+      <div className="fixed top-3 right-3 z-[200] flex items-center" style={{ gap: '8px' }}>
+        {hintsEnabled ? (
+          <button
+            onClick={() => setIsPanelOpen(true)}
+            className="bg-stone-100 dark:bg-zinc-800 p-2 rounded-full border border-stone-200 dark:border-zinc-700 text-pink-500 dark:text-pink-400 hover:scale-110 transition-transform hover:text-pink-600 dark:hover:text-pink-300"
+          >
+            <MessageCircle size={22} />
+          </button>
+        ) : (
+          <Tooltip text="Add a Gemini API key to see hints" position="bottom">
+            <div className="bg-stone-100 dark:bg-zinc-800 p-2 rounded-full border border-stone-200 dark:border-zinc-700 text-stone-300 dark:text-zinc-600 opacity-50 cursor-not-allowed">
+              <MessageCircle size={22} />
+            </div>
+          </Tooltip>
+        )}
+        <a
+          href="https://www.buymeacoffee.com/josueagbekodo"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <img
+            src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+            alt="Buy Me A Coffee"
+            className="h-10 w-auto"
+          />
+        </a>
+      </div>
       <div className="h-[100svh] bg-stone-50 dark:bg-black flex flex-col relative overflow-hidden">
         {showBanner && <ApiKeyBanner onOpenModal={() => setModalDismissed(false)} />}
         {showModal && <ApiKeyModal onSuccess={handleApiKeySuccess} onClose={handleApiKeyModalClose} />}
@@ -645,20 +671,6 @@ export default function App() {
             >
               {isDark ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            {hintsEnabled ? (
-              <button
-                onClick={() => setIsPanelOpen(true)}
-                className="bg-stone-100 dark:bg-zinc-800 p-2 rounded-full border border-stone-200 dark:border-zinc-700 text-pink-500 dark:text-pink-400 hover:scale-110 transition-transform hover:text-pink-600 dark:hover:text-pink-300"
-              >
-                <MessageCircle size={22} />
-              </button>
-            ) : (
-              <Tooltip text="Add a Gemini API key to see hints" position="bottom">
-                <div className="bg-stone-100 dark:bg-zinc-800 p-2 rounded-full border border-stone-200 dark:border-zinc-700 text-stone-300 dark:text-zinc-600 opacity-50 cursor-not-allowed">
-                  <MessageCircle size={22} />
-                </div>
-              </Tooltip>
-            )}
           </div>
 
           {/* Characters + Hint row */}
