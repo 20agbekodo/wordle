@@ -20,8 +20,8 @@ export const WordleBoard: React.FC<WordleBoardProps> = ({ word, guesses, current
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-2 overflow-hidden min-h-0 w-full">
       <div
-        className="flex flex-col gap-1 sm:gap-2 w-full max-w-2xl max-h-full"
-        style={{ aspectRatio: `${word.length} / 6` }}
+        className="flex flex-col gap-1 sm:gap-2"
+        style={{ aspectRatio: `${word.length} / 6`, height: '100%', maxHeight: '100%', maxWidth: '42rem' }}
       >
         {guesses.map((guess, i) => (
           <Row key={i} word={word} guess={guess} isFinal={true} />

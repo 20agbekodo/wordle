@@ -644,7 +644,7 @@ export default function App() {
   const HintPanelContent = (
     <>
       <div className="p-4 border-b border-stone-200 dark:border-zinc-800 flex items-center gap-3 bg-white dark:bg-zinc-950">
-        <button onClick={() => setIsPanelOpen(false)} className="text-stone-400 dark:text-zinc-500 hover:text-stone-700 dark:hover:text-zinc-300 transition-colors flex-shrink-0">
+        <button onClick={() => setIsPanelOpen(false)} className="md:hidden text-stone-400 dark:text-zinc-500 hover:text-stone-700 dark:hover:text-zinc-300 transition-colors flex-shrink-0">
           <X size={18} />
         </button>
         <h3 className="font-bold text-pink-400">{t.conversation}</h3>
@@ -676,7 +676,7 @@ export default function App() {
 
   return (
     <>
-      <div className="fixed top-3 right-3 z-[200] flex items-center" style={{ gap: '8px' }}>
+      <div className="fixed top-3 right-3 z-[200] flex items-center md:hidden" style={{ gap: '8px' }}>
         {hintsEnabled ? (
           <button
             onClick={() => setIsPanelOpen(true)}
@@ -721,6 +721,14 @@ export default function App() {
                 </button>
                 <div className="flex items-center gap-2">
                   <LanguageSelector />
+                  <a
+                    href="https://www.buymeacoffee.com/josueagbekodo"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hidden md:block"
+                  >
+                    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" className="h-8 w-auto" />
+                  </a>
                   <button
                     onClick={() => setIsDark(!isDark)}
                     className="p-2 rounded-full bg-stone-200 dark:bg-zinc-800 text-stone-600 dark:text-zinc-300 hover:bg-stone-300 dark:hover:bg-zinc-700 transition-colors border border-stone-300 dark:border-zinc-600"
@@ -805,19 +813,19 @@ export default function App() {
             </div>
           </div>
 
-          {/* Hint Panel — mobile: absolute overlay / desktop: sidebar */}
+          {/* Desktop: always-visible sidebar */}
+          <div className="hidden md:flex w-80 flex-shrink-0 flex-col bg-white dark:bg-zinc-950 border-l border-stone-200 dark:border-zinc-800 shadow-xl">
+            {HintPanelContent}
+          </div>
+
+          {/* Mobile: overlay when isPanelOpen */}
           {isPanelOpen && (
-            <>
-              {/* Mobile backdrop only */}
-              <div
-                className="md:hidden absolute inset-0 z-40 bg-stone-800/20 dark:bg-black/80 backdrop-blur-sm"
-                onClick={() => setIsPanelOpen(false)}
-              />
-              {/* Panel */}
-              <div className="absolute right-0 top-0 bottom-0 w-full max-w-sm z-50 md:relative md:w-80 md:max-w-none md:z-auto flex flex-col bg-white dark:bg-zinc-950 border-l border-stone-200 dark:border-zinc-800 shadow-xl animate-slide-in-right">
+            <div className="md:hidden absolute inset-0 z-50 flex justify-end">
+              <div className="absolute inset-0 bg-stone-800/20 dark:bg-black/80 backdrop-blur-sm" onClick={() => setIsPanelOpen(false)} />
+              <div className="relative w-full max-w-sm flex flex-col bg-white dark:bg-zinc-950 h-full shadow-2xl animate-slide-in-right border-l border-stone-200 dark:border-zinc-800">
                 {HintPanelContent}
               </div>
-            </>
+            </div>
           )}
 
         {/* Easter Egg Intro Animation */}
