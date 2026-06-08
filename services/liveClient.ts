@@ -106,7 +106,8 @@ export const connectLiveSession = async (
   character: CharacterType,
   word: string,
   onDisconnect: () => void,
-  language: Language = 'en'
+  language: Language = 'en',
+  context?: string
 ) => {
   await disconnectLiveSession();
 
@@ -141,7 +142,8 @@ export const connectLiveSession = async (
   
   const instructionTemplate = character === 'girl' ? SYSTEM_INSTRUCTION_LIVE_GIRL : SYSTEM_INSTRUCTION_LIVE_BOY;
   const langInstruction = language !== 'en' ? `\nIMPORTANT: You MUST speak exclusively in ${LANGUAGE_NAMES[language]}. All your responses must be in ${LANGUAGE_NAMES[language]}.` : '';
-  const systemInstruction = instructionTemplate.replace('{{WORD}}', word) + langInstruction;
+  const contextInstruction = context ? `\nPRIORITY CONTEXT (set by the game creator, NOT visible to the player): "${context}". Weave this context naturally into your hints when relevant.` : '';
+  const systemInstruction = instructionTemplate.replace('{{WORD}}', word) + langInstruction + contextInstruction;
   const voiceName = character === 'girl' ? 'Kore' : 'Puck';
 
   const sessionPromise = ai.live.connect({

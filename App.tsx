@@ -11,6 +11,7 @@ import { Keyboard } from './components/Keyboard';
 import { WordleBoard } from './components/WordleBoard';
 import { LanguageSelector } from './components/LanguageSelector';
 import { useLanguage } from './i18n/LanguageContext';
+import { stripAccents } from './utils/wordle';
 
 type TileState = 'correct' | 'wrong-place' | 'wrong';
 
@@ -395,7 +396,7 @@ export default function App() {
     const newGuesses = [...gameState.guesses, currentGuess];
     let newStatus: 'playing' | 'won' | 'lost' = 'playing';
 
-    if (currentGuess === gameState.word) {
+    if (stripAccents(currentGuess) === stripAccents(gameState.word)) {
       newStatus = 'won';
     } else if (newGuesses.length >= 6) {
       newStatus = 'lost';
@@ -444,7 +445,7 @@ export default function App() {
       setIsLiveConnecting(true);
       setActiveSpeaker(character);
       try {
-        await connectLiveSession(character, gameState.word, () => setActiveSpeaker(null), language);
+        await connectLiveSession(character, gameState.word, () => setActiveSpeaker(null), language, gameState.context);
       } catch (e) {
         console.error(e);
         setActiveSpeaker(null);
@@ -640,6 +641,39 @@ export default function App() {
   const latestHint = gameState.hints[gameState.hints.length - 1];
   const isNespressoWin = gameState.status === 'won' && gameState.word === 'NESPRESSO';
 
+  const HintPanelContent = (
+    <>
+      <div className="p-4 border-b border-stone-200 dark:border-zinc-800 flex items-center gap-3 bg-white dark:bg-zinc-950">
+        <button onClick={() => setIsPanelOpen(false)} className="text-stone-400 dark:text-zinc-500 hover:text-stone-700 dark:hover:text-zinc-300 transition-colors flex-shrink-0">
+          <X size={18} />
+        </button>
+        <h3 className="font-bold text-pink-400">{t.conversation}</h3>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 kawaii-scroll bg-stone-50 dark:bg-zinc-950">
+        {gameState.hints.map((hint, idx) => (
+          <div key={idx} className={`flex gap-3 ${hint.sender === 'boy' ? 'flex-row-reverse' : ''}`}>
+            <div className="flex-shrink-0">
+              <VideoCharacter src={hint.sender === 'girl' ? VIDEO_PATHS.normalGirl : VIDEO_PATHS.normalBoy} className="w-10 h-10 rounded-full border-2 border-stone-300 dark:border-zinc-700 shadow-sm" />
+            </div>
+            <div className={`p-3 rounded-2xl max-w-[80%] text-sm ${hint.sender === 'girl' ? 'bg-pink-50 dark:bg-pink-900/50 text-pink-900 dark:text-pink-100 rounded-tl-none border border-pink-200 dark:border-pink-900' : 'bg-blue-50 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100 rounded-tr-none border border-blue-200 dark:border-blue-900'}`}>
+              {hint.text}
+            </div>
+          </div>
+        ))}
+        <div ref={el => el?.scrollIntoView({ behavior: 'smooth' })} />
+      </div>
+      <div className="p-4 border-t border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+        <button
+          onClick={requestNewHint}
+          disabled={loading}
+          className="w-full bg-pink-700 text-white py-3 rounded-xl font-bold shadow-[0_4px_0_rgb(190,24,93)] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50 hover:bg-pink-600"
+        >
+          {t.askHint}
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <>
       <div className="fixed top-3 right-3 z-[200] flex items-center" style={{ gap: '8px' }}>
@@ -669,138 +703,122 @@ export default function App() {
           />
         </a>
       </div>
-      <div className="h-[100svh] bg-stone-50 dark:bg-black flex flex-col relative overflow-hidden">
+      <div className="h-[100svh] bg-stone-50 dark:bg-black flex flex-col overflow-hidden">
         {showBanner && <ApiKeyBanner onOpenModal={() => setModalDismissed(false)} />}
         {showModal && <ApiKeyModal onSuccess={handleApiKeySuccess} onClose={handleApiKeyModalClose} />}
 
-        {/* Header / Character Area */}
-        <div className="flex-none bg-white dark:bg-zinc-900 p-2 pb-4 rounded-b-[2.5rem] shadow-lg shadow-stone-200 dark:shadow-black relative z-10 border-b border-stone-200 dark:border-zinc-800">
-          {/* Nav bar */}
-          <div className="flex justify-between items-center px-4 mb-2">
-            <button onClick={() => setMode(GameMode.MENU)} className="text-pink-400 hover:text-pink-300">
-              <ArrowLeft size={24} />
-            </button>
-            <div className="flex items-center gap-2">
-              <LanguageSelector />
-              <button
-                onClick={() => setIsDark(!isDark)}
-                className="p-2 rounded-full bg-stone-200 dark:bg-zinc-800 text-stone-600 dark:text-zinc-300 hover:bg-stone-300 dark:hover:bg-zinc-700 transition-colors border border-stone-300 dark:border-zinc-600"
-              >
-                {isDark ? <Sun size={20} /> : <Moon size={20} />}
-              </button>
-            </div>
-          </div>
+        {/* Content area: game column + optional sidebar */}
+        <div className="flex-1 flex min-h-0 relative overflow-hidden">
 
-          {/* Characters + Hint row */}
-          <div className="flex items-end gap-3 max-w-lg mx-auto px-4">
-            {/* Girl */}
-            {hintsEnabled ? (
-              <div className="relative cursor-pointer group flex-shrink-0" onClick={() => toggleLiveSession('girl')}>
-                <VideoCharacter
-                  src={getCharacterVideo('girl')}
-                  className={`w-16 h-16 sm:w-20 sm:h-20 transition-all ${activeSpeaker === 'girl' ? 'ring-4 ring-pink-500 scale-105' : ''}`}
-                />
-                <div className="absolute -bottom-2 -right-2 bg-pink-700 text-white p-1.5 rounded-full shadow-md group-hover:scale-110 transition-transform">
-                  {activeSpeaker === 'girl' ? <Volume2 size={14} className="animate-pulse" /> : <Mic size={14} />}
-                </div>
-              </div>
-            ) : (
-              <Tooltip text={t.tooltipVoice} position="bottom">
-                <div className="relative flex-shrink-0 opacity-40 cursor-not-allowed">
-                  <VideoCharacter src={getCharacterVideo('girl')} className="w-16 h-16 sm:w-20 sm:h-20" />
-                  <div className="absolute -bottom-2 -right-2 bg-stone-400 dark:bg-zinc-600 text-white p-1.5 rounded-full shadow-md">
-                    <Mic size={14} />
-                  </div>
-                </div>
-              </Tooltip>
-            )}
-
-            {/* Hint text */}
-            <Tooltip
-              text={latestHint ? latestHint.text : ''}
-              position="top"
-              wide={true}
-              className="flex-1 min-w-0 pb-2"
-            >
-              {latestHint && (
-                <p className="text-xs sm:text-sm text-pink-600 dark:text-pink-300 italic font-medium leading-tight line-clamp-2 cursor-default text-center">
-                  "{latestHint.text}"
-                </p>
-              )}
-            </Tooltip>
-
-            {/* Boy */}
-            {hintsEnabled ? (
-              <div className="relative cursor-pointer group flex-shrink-0" onClick={() => toggleLiveSession('boy')}>
-                <VideoCharacter
-                  src={getCharacterVideo('boy')}
-                  className={`w-16 h-16 sm:w-20 sm:h-20 transition-all ${activeSpeaker === 'boy' ? 'ring-4 ring-blue-500 scale-105' : ''}`}
-                />
-                <div className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-1.5 rounded-full shadow-md group-hover:scale-110 transition-transform">
-                  {activeSpeaker === 'boy' ? <Volume2 size={14} className="animate-pulse" /> : <Mic size={14} />}
-                </div>
-              </div>
-            ) : (
-              <Tooltip text={t.tooltipVoice} position="bottom">
-                <div className="relative flex-shrink-0 opacity-40 cursor-not-allowed">
-                  <VideoCharacter src={getCharacterVideo('boy')} className="w-16 h-16 sm:w-20 sm:h-20" />
-                  <div className="absolute -bottom-2 -right-2 bg-stone-400 dark:bg-zinc-600 text-white p-1.5 rounded-full shadow-md">
-                    <Mic size={14} />
-                  </div>
-                </div>
-              </Tooltip>
-            )}
-          </div>
-        </div>
-
-        <WordleBoard word={gameState.word} guesses={gameState.guesses} currentGuess={currentGuess} />
-
-        <div className="flex-none pb-safe-bottom bg-stone-50 dark:bg-black pt-2">
-          <Keyboard
-            onKey={onKeyPress}
-            onEnter={onEnter}
-            onBackspace={onBackspace}
-            guesses={gameState.guesses}
-            word={gameState.word}
-          />
-        </div>
-
-        {/* Hint Panel */}
-        {isPanelOpen && (
-          <div className="absolute inset-0 z-50 flex justify-end">
-            <div className="absolute inset-0 bg-stone-800/20 dark:bg-black/80 backdrop-blur-sm" onClick={() => setIsPanelOpen(false)} />
-            <div className="relative w-full max-w-sm bg-white dark:bg-zinc-950 h-full shadow-2xl flex flex-col animate-slide-in-right border-l border-stone-200 dark:border-zinc-800">
-              <div className="p-4 border-b border-stone-200 dark:border-zinc-800 flex items-center gap-3 bg-white dark:bg-zinc-950">
-                <button onClick={() => setIsPanelOpen(false)} className="text-stone-400 dark:text-zinc-500 hover:text-stone-700 dark:hover:text-zinc-300 transition-colors flex-shrink-0">
-                  <X size={18} />
+          {/* Game column */}
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            {/* Header / Character Area */}
+            <div className="flex-none bg-white dark:bg-zinc-900 p-2 pb-4 rounded-b-[2.5rem] shadow-lg shadow-stone-200 dark:shadow-black relative z-10 border-b border-stone-200 dark:border-zinc-800">
+              {/* Nav bar */}
+              <div className="flex justify-between items-center px-4 mb-2">
+                <button onClick={() => setMode(GameMode.MENU)} className="text-pink-400 hover:text-pink-300">
+                  <ArrowLeft size={24} />
                 </button>
-                <h3 className="font-bold text-pink-400">{t.conversation}</h3>
+                <div className="flex items-center gap-2">
+                  <LanguageSelector />
+                  <button
+                    onClick={() => setIsDark(!isDark)}
+                    className="p-2 rounded-full bg-stone-200 dark:bg-zinc-800 text-stone-600 dark:text-zinc-300 hover:bg-stone-300 dark:hover:bg-zinc-700 transition-colors border border-stone-300 dark:border-zinc-600"
+                  >
+                    {isDark ? <Sun size={20} /> : <Moon size={20} />}
+                  </button>
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 kawaii-scroll bg-stone-50 dark:bg-zinc-950">
-                {gameState.hints.map((hint, idx) => (
-                  <div key={idx} className={`flex gap-3 ${hint.sender === 'boy' ? 'flex-row-reverse' : ''}`}>
-                    <div className="flex-shrink-0">
-                      <VideoCharacter src={hint.sender === 'girl' ? VIDEO_PATHS.normalGirl : VIDEO_PATHS.normalBoy} className="w-10 h-10 rounded-full border-2 border-stone-300 dark:border-zinc-700 shadow-sm" />
-                    </div>
-                    <div className={`p-3 rounded-2xl max-w-[80%] text-sm ${hint.sender === 'girl' ? 'bg-pink-50 dark:bg-pink-900/50 text-pink-900 dark:text-pink-100 rounded-tl-none border border-pink-200 dark:border-pink-900' : 'bg-blue-50 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100 rounded-tr-none border border-blue-200 dark:border-blue-900'}`}>
-                      {hint.text}
+
+              {/* Characters + Hint row */}
+              <div className="flex items-end gap-3 max-w-lg mx-auto px-4">
+                {/* Girl */}
+                {hintsEnabled ? (
+                  <div className="relative cursor-pointer group flex-shrink-0" onClick={() => toggleLiveSession('girl')}>
+                    <VideoCharacter
+                      src={getCharacterVideo('girl')}
+                      className={`w-16 h-16 sm:w-20 sm:h-20 transition-all ${activeSpeaker === 'girl' ? 'ring-4 ring-pink-500 scale-105' : ''}`}
+                    />
+                    <div className="absolute -bottom-2 -right-2 bg-pink-700 text-white p-1.5 rounded-full shadow-md group-hover:scale-110 transition-transform">
+                      {activeSpeaker === 'girl' ? <Volume2 size={14} className="animate-pulse" /> : <Mic size={14} />}
                     </div>
                   </div>
-                ))}
-                <div ref={el => el?.scrollIntoView({ behavior: 'smooth' })} />
-              </div>
-              <div className="p-4 border-t border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
-                <button
-                  onClick={requestNewHint}
-                  disabled={loading}
-                  className="w-full bg-pink-700 text-white py-3 rounded-xl font-bold shadow-[0_4px_0_rgb(190,24,93)] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50 hover:bg-pink-600"
+                ) : (
+                  <Tooltip text={t.tooltipVoice} position="bottom">
+                    <div className="relative flex-shrink-0 opacity-40 cursor-not-allowed">
+                      <VideoCharacter src={getCharacterVideo('girl')} className="w-16 h-16 sm:w-20 sm:h-20" />
+                      <div className="absolute -bottom-2 -right-2 bg-stone-400 dark:bg-zinc-600 text-white p-1.5 rounded-full shadow-md">
+                        <Mic size={14} />
+                      </div>
+                    </div>
+                  </Tooltip>
+                )}
+
+                {/* Hint text */}
+                <Tooltip
+                  text={latestHint ? latestHint.text : ''}
+                  position="bottom"
+                  wide={true}
+                  className="flex-1 min-w-0 pb-2"
                 >
-                  {t.askHint}
-                </button>
+                  {latestHint && (
+                    <p className="text-xs sm:text-sm text-pink-600 dark:text-pink-300 italic font-medium leading-tight line-clamp-2 cursor-default text-center">
+                      "{latestHint.text}"
+                    </p>
+                  )}
+                </Tooltip>
+
+                {/* Boy */}
+                {hintsEnabled ? (
+                  <div className="relative cursor-pointer group flex-shrink-0" onClick={() => toggleLiveSession('boy')}>
+                    <VideoCharacter
+                      src={getCharacterVideo('boy')}
+                      className={`w-16 h-16 sm:w-20 sm:h-20 transition-all ${activeSpeaker === 'boy' ? 'ring-4 ring-blue-500 scale-105' : ''}`}
+                    />
+                    <div className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-1.5 rounded-full shadow-md group-hover:scale-110 transition-transform">
+                      {activeSpeaker === 'boy' ? <Volume2 size={14} className="animate-pulse" /> : <Mic size={14} />}
+                    </div>
+                  </div>
+                ) : (
+                  <Tooltip text={t.tooltipVoice} position="bottom">
+                    <div className="relative flex-shrink-0 opacity-40 cursor-not-allowed">
+                      <VideoCharacter src={getCharacterVideo('boy')} className="w-16 h-16 sm:w-20 sm:h-20" />
+                      <div className="absolute -bottom-2 -right-2 bg-stone-400 dark:bg-zinc-600 text-white p-1.5 rounded-full shadow-md">
+                        <Mic size={14} />
+                      </div>
+                    </div>
+                  </Tooltip>
+                )}
               </div>
             </div>
+
+            <WordleBoard word={gameState.word} guesses={gameState.guesses} currentGuess={currentGuess} />
+
+            <div className="flex-none pb-safe-bottom bg-stone-50 dark:bg-black pt-2">
+              <Keyboard
+                onKey={onKeyPress}
+                onEnter={onEnter}
+                onBackspace={onBackspace}
+                guesses={gameState.guesses}
+                word={gameState.word}
+              />
+            </div>
           </div>
-        )}
+
+          {/* Hint Panel — mobile: absolute overlay / desktop: sidebar */}
+          {isPanelOpen && (
+            <>
+              {/* Mobile backdrop only */}
+              <div
+                className="md:hidden absolute inset-0 z-40 bg-stone-800/20 dark:bg-black/80 backdrop-blur-sm"
+                onClick={() => setIsPanelOpen(false)}
+              />
+              {/* Panel */}
+              <div className="absolute right-0 top-0 bottom-0 w-full max-w-sm z-50 md:relative md:w-80 md:max-w-none md:z-auto flex flex-col bg-white dark:bg-zinc-950 border-l border-stone-200 dark:border-zinc-800 shadow-xl animate-slide-in-right">
+                {HintPanelContent}
+              </div>
+            </>
+          )}
 
         {/* Easter Egg Intro Animation */}
         {showEasterEggIntro && (
@@ -914,7 +932,8 @@ export default function App() {
           }
           .animate-confetti { animation: confetti linear infinite; }
         `}} />
-      </div>
+        </div>{/* closes flex-1 content wrapper */}
+      </div>{/* closes h-[100svh] */}
     </>
   );
 }
