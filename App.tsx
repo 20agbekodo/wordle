@@ -9,6 +9,8 @@ import { VIDEO_PATHS } from './constants';
 import { VideoCharacter } from './components/VideoCharacter';
 import { Keyboard } from './components/Keyboard';
 import { WordleBoard } from './components/WordleBoard';
+import { LanguageSelector } from './components/LanguageSelector';
+import { useLanguage } from './i18n/LanguageContext';
 
 type TileState = 'correct' | 'wrong-place' | 'wrong';
 
@@ -105,6 +107,7 @@ const Tooltip: React.FC<{
 );
 
 const ApiKeyModal: React.FC<{ onSuccess: () => void; onClose?: () => void }> = ({ onSuccess, onClose }) => {
+  const { t } = useLanguage();
   const [key, setKey] = useState('');
   const [status, setStatus] = useState<'idle' | 'checking' | 'success' | 'error'>('idle');
 
@@ -137,19 +140,19 @@ const ApiKeyModal: React.FC<{ onSuccess: () => void; onClose?: () => void }> = (
         )}
         <div className="flex items-center gap-2 mb-1">
           <KeyRound size={18} className="text-pink-500 flex-shrink-0" />
-          <h2 className="text-lg font-bold text-pink-500">Gemini API Key Required</h2>
+          <h2 className="text-lg font-bold text-pink-500">{t.apiKeyRequired}</h2>
         </div>
         <p className="text-sm text-stone-600 dark:text-zinc-400 mb-3 pr-6">
-          This app uses Google Gemini AI for hints and voice chat.{' '}
+          {t.apiKeyDesc}{' '}
           <a
             href="https://aistudio.google.com/api-keys"
             target="_blank"
             rel="noopener noreferrer"
             className="text-pink-500 underline hover:text-pink-600 font-medium"
           >
-            Get a free key here
+            {t.apiKeyGetFree}
           </a>
-          {' '}— no credit card needed, takes 30 seconds.
+          {' '}{t.apiKeyNoCard}
         </p>
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input
@@ -166,36 +169,40 @@ const ApiKeyModal: React.FC<{ onSuccess: () => void; onClose?: () => void }> = (
             disabled={!key.trim() || status === 'checking' || status === 'success'}
             className="bg-pink-700 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-[0_3px_0_rgb(190,24,93)] active:shadow-none active:translate-y-[3px] transition-all disabled:opacity-50 hover:bg-pink-600 whitespace-nowrap"
           >
-            {status === 'checking' ? '...' : 'Verify & Save'}
+            {status === 'checking' ? '...' : t.apiKeyVerify}
           </button>
         </form>
         {status === 'success' && (
-          <p className="mt-2 text-sm text-green-600 dark:text-green-400 font-semibold">✓ Key is working — you're all set!</p>
+          <p className="mt-2 text-sm text-green-600 dark:text-green-400 font-semibold">{t.apiKeySuccess}</p>
         )}
         {status === 'error' && (
-          <p className="mt-2 text-sm text-red-500 font-medium">That key didn't work. Double-check it and try again.</p>
+          <p className="mt-2 text-sm text-red-500 font-medium">{t.apiKeyError}</p>
         )}
       </div>
     </div>
   );
 };
 
-const ApiKeyBanner: React.FC<{ onOpenModal: () => void }> = ({ onOpenModal }) => (
-  <div className="w-full shrink-0 bg-pink-50 dark:bg-zinc-900 border-b border-pink-200 dark:border-pink-900 px-4 py-1.5 flex items-center justify-center">
-    <p className="text-center text-xs sm:text-sm text-pink-700 dark:text-pink-400 leading-snug">
-      Hints are disabled, you can enable them by{' '}
-      <button
-        onClick={onOpenModal}
-        className="underline font-semibold hover:text-pink-900 dark:hover:text-pink-200 transition-colors"
-      >
-        providing a (free) Gemini API key
-      </button>
-      . It will only be stored in your own local storage.
-    </p>
-  </div>
-);
+const ApiKeyBanner: React.FC<{ onOpenModal: () => void }> = ({ onOpenModal }) => {
+  const { t } = useLanguage();
+  return (
+    <div className="w-full shrink-0 bg-pink-50 dark:bg-zinc-900 border-b border-pink-200 dark:border-pink-900 px-4 py-1.5 flex items-center justify-center">
+      <p className="text-center text-xs sm:text-sm text-pink-700 dark:text-pink-400 leading-snug">
+        {t.apiBannerText}{' '}
+        <button
+          onClick={onOpenModal}
+          className="underline font-semibold hover:text-pink-900 dark:hover:text-pink-200 transition-colors"
+        >
+          {t.apiBannerLink}
+        </button>
+        {t.apiBannerSuffix}
+      </p>
+    </div>
+  );
+};
 
 export default function App() {
+  const { language, t } = useLanguage();
   const [mode, setMode] = useState<GameMode>(GameMode.MENU);
   const [gameState, setGameState] = useState<GameState>({
     word: '',
@@ -323,7 +330,7 @@ export default function App() {
   const handleQuickPlay = async () => {
     setLoading(true);
     try {
-      const data = await generateQuickGame(difficulty);
+      const data = await generateQuickGame(difficulty, language);
       startCustomGame(data.word, data.hint);
     } catch (e) {
       alert("Oops! AI is sleepy. Try again.");
@@ -419,7 +426,7 @@ export default function App() {
     setLoading(true);
     try {
       await new Promise(r => setTimeout(r, 500));
-      const text = await generateHint(gameState.word, gameState.hints, nextSender, gameState.difficulty, gameState.context);
+      const text = await generateHint(gameState.word, gameState.hints, nextSender, gameState.difficulty, gameState.context, language);
       setGameState(prev => ({
         ...prev,
         hints: [...prev.hints, { text, sender: nextSender, timestamp: Date.now() }]
@@ -437,7 +444,7 @@ export default function App() {
       setIsLiveConnecting(true);
       setActiveSpeaker(character);
       try {
-        await connectLiveSession(character, gameState.word, () => setActiveSpeaker(null));
+        await connectLiveSession(character, gameState.word, () => setActiveSpeaker(null), language);
       } catch (e) {
         console.error(e);
         setActiveSpeaker(null);
@@ -484,7 +491,7 @@ export default function App() {
             <VideoCharacter src={VIDEO_PATHS.inLoveGirl} className="w-32 h-32 sm:w-48 sm:h-48" />
             <VideoCharacter src={VIDEO_PATHS.inLoveBoy} className="w-32 h-32 sm:w-48 sm:h-48" />
           </div>
-          <p className="text-pink-600 dark:text-pink-300 mb-8 font-medium">The wordle game you deserve ✨</p>
+          <p className="text-pink-600 dark:text-pink-300 mb-8 font-medium">{t.tagline}</p>
           <div className="flex flex-col gap-4 w-full max-w-xs">
             <div className="flex gap-2 w-full">
               {([1, 2, 3] as const).map(level => (
@@ -497,7 +504,7 @@ export default function App() {
                       : 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400 border-stone-300 dark:border-zinc-700 hover:border-pink-400 hover:text-pink-500'
                   }`}
                 >
-                  {level === 1 ? '🍼 Baby' : level === 2 ? '🤔 Mid' : '💀 Smart-ass'}
+                  {t.difficulty[level]}
                 </button>
               ))}
             </div>
@@ -506,22 +513,26 @@ export default function App() {
               disabled={loading}
               className="flex items-center justify-center gap-2 bg-pink-700 text-white p-4 rounded-xl font-bold shadow-[0_4px_0_rgb(190,24,93)] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50 hover:bg-pink-600"
             >
-              {loading ? "Creating Game..." : <><Play size={20} /> Quick Play</>}
+              {loading ? t.creating : <><Play size={20} /> {t.quickPlay}</>}
             </button>
             <button
               onClick={handleCreateCustom}
               className="flex items-center justify-center gap-2 bg-stone-100 dark:bg-slate-900 text-pink-600 dark:text-pink-400 border-2 border-stone-300 dark:border-slate-800 p-4 rounded-xl font-bold shadow-[0_4px_0_#a8a29e] dark:shadow-[0_4px_0_#0f172a] active:shadow-none active:translate-y-[4px] transition-all hover:bg-stone-200 dark:hover:bg-slate-800"
             >
-              Create Your Game
+              {t.createGame}
             </button>
           </div>
         </div>
-        <button
-          onClick={() => setIsDark(!isDark)}
-          className="absolute top-3 right-44 p-2.5 rounded-full bg-stone-200 dark:bg-zinc-800 text-stone-600 dark:text-zinc-300 hover:bg-stone-300 dark:hover:bg-zinc-700 transition-colors border border-stone-300 dark:border-zinc-600 shadow-sm"
-        >
-          {isDark ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
+        {/* Top-right controls */}
+        <div className="absolute top-3 right-44 flex items-center gap-2">
+          <LanguageSelector />
+          <button
+            onClick={() => setIsDark(!isDark)}
+            className="p-2 rounded-full bg-stone-200 dark:bg-zinc-800 text-stone-600 dark:text-zinc-300 hover:bg-stone-300 dark:hover:bg-zinc-700 transition-colors border border-stone-300 dark:border-zinc-600 shadow-sm"
+          >
+            {isDark ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+        </div>
       </div>
     );
   }
@@ -537,43 +548,43 @@ export default function App() {
             <ArrowLeft size={32} />
           </button>
           <div className="bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-xl w-full max-w-md border-4 border-stone-200 dark:border-zinc-800">
-            <h2 className="text-2xl font-bold text-pink-500 mb-6 text-center">Create Custom Game</h2>
+            <h2 className="text-2xl font-bold text-pink-500 mb-6 text-center">{t.createCustomGame}</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-pink-600 dark:text-pink-300 font-bold mb-1 text-sm">SECRET WORD (4-10 letters)</label>
+                <label className="block text-pink-600 dark:text-pink-300 font-bold mb-1 text-sm">{t.secretWord}</label>
                 <input
                   type="text"
                   maxLength={10}
                   value={customWord}
                   onChange={e => setCustomWord(e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase())}
                   className="w-full bg-stone-50 dark:bg-black border-2 border-stone-300 dark:border-zinc-700 rounded-xl p-3 font-bold text-stone-900 dark:text-white focus:outline-none focus:border-pink-500"
-                  placeholder="LOVE"
+                  placeholder={t.wordPlaceholder}
                 />
               </div>
               <div>
-                <label className="block text-pink-600 dark:text-pink-300 font-bold mb-1 text-sm">FIRST HINT</label>
+                <label className="block text-pink-600 dark:text-pink-300 font-bold mb-1 text-sm">{t.firstHint}</label>
                 <input
                   type="text"
                   value={customHint}
                   onChange={e => setCustomHint(e.target.value)}
                   className="w-full bg-stone-50 dark:bg-black border-2 border-stone-300 dark:border-zinc-700 rounded-xl p-3 font-bold text-stone-900 dark:text-white focus:outline-none focus:border-pink-500"
-                  placeholder="What makes the world go round?"
+                  placeholder={t.hintPlaceholder}
                 />
               </div>
               <div>
                 <label className="block text-pink-600 dark:text-pink-300 font-bold mb-1 text-sm">
-                  CONTEXT <span className="text-stone-400 dark:text-zinc-500 font-normal">(secret — only the AI sees this)</span>
+                  {t.context} <span className="text-stone-400 dark:text-zinc-500 font-normal">{t.contextHint}</span>
                 </label>
                 <textarea
                   value={customContext}
                   onChange={e => setCustomContext(e.target.value)}
                   rows={2}
                   className="w-full bg-stone-50 dark:bg-black border-2 border-stone-300 dark:border-zinc-700 rounded-xl p-3 text-sm text-stone-900 dark:text-white focus:outline-none focus:border-pink-500 resize-none"
-                  placeholder="e.g. It's the name of my cat, hint at the sound it makes"
+                  placeholder={t.contextPlaceholder}
                 />
               </div>
               <div>
-                <label className="block text-pink-600 dark:text-pink-300 font-bold mb-2 text-sm">DIFFICULTY</label>
+                <label className="block text-pink-600 dark:text-pink-300 font-bold mb-2 text-sm">{t.difficultyLabel}</label>
                 <div className="flex gap-2">
                   {([1, 2, 3] as const).map(level => (
                     <button
@@ -586,7 +597,7 @@ export default function App() {
                           : 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400 border-stone-300 dark:border-zinc-700 hover:border-pink-400 hover:text-pink-500'
                       }`}
                     >
-                      {level === 1 ? '🍼 Baby' : level === 2 ? '🤔 Mid' : '💀 Smart-ass'}
+                      {t.difficulty[level]}
                     </button>
                   ))}
                 </div>
@@ -597,7 +608,7 @@ export default function App() {
                   disabled={!canSubmitCustom}
                   className="flex-1 bg-pink-700 text-white py-3 rounded-xl font-bold shadow-[0_4px_0_rgb(190,24,93)] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50 disabled:shadow-none hover:bg-pink-600"
                 >
-                  Play Now
+                  {t.playNow}
                 </button>
                 <button
                   onClick={handleCopyLinkCustom}
@@ -605,18 +616,22 @@ export default function App() {
                   className="flex-1 flex items-center justify-center gap-2 bg-stone-100 dark:bg-zinc-800 text-pink-600 dark:text-pink-400 border-2 border-stone-300 dark:border-zinc-700 py-3 rounded-xl font-bold shadow-[0_4px_0_#a8a29e] dark:shadow-[0_4px_0_#18181b] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50 disabled:shadow-none hover:bg-stone-200 dark:hover:bg-zinc-700"
                 >
                   {showCopyToast ? <Check size={18} /> : <Copy size={18} />}
-                  {showCopyToast ? "Copied!" : "Copy Link"}
+                  {showCopyToast ? t.copied : t.copyLink}
                 </button>
               </div>
             </div>
           </div>
         </div>
-        <button
-          onClick={() => setIsDark(!isDark)}
-          className="absolute top-3 right-44 p-2.5 rounded-full bg-stone-200 dark:bg-zinc-800 text-stone-600 dark:text-zinc-300 hover:bg-stone-300 dark:hover:bg-zinc-700 transition-colors border border-stone-300 dark:border-zinc-600 shadow-sm"
-        >
-          {isDark ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
+        {/* Top-right controls */}
+        <div className="absolute top-3 right-44 flex items-center gap-2">
+          <LanguageSelector />
+          <button
+            onClick={() => setIsDark(!isDark)}
+            className="p-2 rounded-full bg-stone-200 dark:bg-zinc-800 text-stone-600 dark:text-zinc-300 hover:bg-stone-300 dark:hover:bg-zinc-700 transition-colors border border-stone-300 dark:border-zinc-600 shadow-sm"
+          >
+            {isDark ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+        </div>
       </div>
     );
   }
@@ -636,7 +651,7 @@ export default function App() {
             <MessageCircle size={22} />
           </button>
         ) : (
-          <Tooltip text="Add a Gemini API key to see hints" position="bottom">
+          <Tooltip text={t.tooltipHints} position="bottom">
             <div className="bg-stone-100 dark:bg-zinc-800 p-2 rounded-full border border-stone-200 dark:border-zinc-700 text-stone-300 dark:text-zinc-600 opacity-50 cursor-not-allowed">
               <MessageCircle size={22} />
             </div>
@@ -665,12 +680,15 @@ export default function App() {
             <button onClick={() => setMode(GameMode.MENU)} className="text-pink-400 hover:text-pink-300">
               <ArrowLeft size={24} />
             </button>
-            <button
-              onClick={() => setIsDark(!isDark)}
-              className="p-2 rounded-full bg-stone-200 dark:bg-zinc-800 text-stone-600 dark:text-zinc-300 hover:bg-stone-300 dark:hover:bg-zinc-700 transition-colors border border-stone-300 dark:border-zinc-600"
-            >
-              {isDark ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
+            <div className="flex items-center gap-2">
+              <LanguageSelector />
+              <button
+                onClick={() => setIsDark(!isDark)}
+                className="p-2 rounded-full bg-stone-200 dark:bg-zinc-800 text-stone-600 dark:text-zinc-300 hover:bg-stone-300 dark:hover:bg-zinc-700 transition-colors border border-stone-300 dark:border-zinc-600"
+              >
+                {isDark ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+            </div>
           </div>
 
           {/* Characters + Hint row */}
@@ -687,7 +705,7 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <Tooltip text="Add a Gemini API key to use voice chat" position="bottom">
+              <Tooltip text={t.tooltipVoice} position="bottom">
                 <div className="relative flex-shrink-0 opacity-40 cursor-not-allowed">
                   <VideoCharacter src={getCharacterVideo('girl')} className="w-16 h-16 sm:w-20 sm:h-20" />
                   <div className="absolute -bottom-2 -right-2 bg-stone-400 dark:bg-zinc-600 text-white p-1.5 rounded-full shadow-md">
@@ -697,7 +715,7 @@ export default function App() {
               </Tooltip>
             )}
 
-            {/* Hint text — full width, tooltip on hover shows full message */}
+            {/* Hint text */}
             <Tooltip
               text={latestHint ? latestHint.text : ''}
               position="top"
@@ -723,7 +741,7 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <Tooltip text="Add a Gemini API key to use voice chat" position="bottom">
+              <Tooltip text={t.tooltipVoice} position="bottom">
                 <div className="relative flex-shrink-0 opacity-40 cursor-not-allowed">
                   <VideoCharacter src={getCharacterVideo('boy')} className="w-16 h-16 sm:w-20 sm:h-20" />
                   <div className="absolute -bottom-2 -right-2 bg-stone-400 dark:bg-zinc-600 text-white p-1.5 rounded-full shadow-md">
@@ -752,9 +770,11 @@ export default function App() {
           <div className="absolute inset-0 z-50 flex justify-end">
             <div className="absolute inset-0 bg-stone-800/20 dark:bg-black/80 backdrop-blur-sm" onClick={() => setIsPanelOpen(false)} />
             <div className="relative w-full max-w-sm bg-white dark:bg-zinc-950 h-full shadow-2xl flex flex-col animate-slide-in-right border-l border-stone-200 dark:border-zinc-800">
-              <div className="p-4 border-b border-stone-200 dark:border-zinc-800 flex justify-between items-center bg-white dark:bg-zinc-950">
-                <h3 className="font-bold text-pink-400">Conversation</h3>
-                <button onClick={() => setIsPanelOpen(false)} className="text-stone-400 dark:text-zinc-500 hover:text-stone-700 dark:hover:text-zinc-300">✕</button>
+              <div className="p-4 border-b border-stone-200 dark:border-zinc-800 flex items-center gap-3 bg-white dark:bg-zinc-950">
+                <button onClick={() => setIsPanelOpen(false)} className="text-stone-400 dark:text-zinc-500 hover:text-stone-700 dark:hover:text-zinc-300 transition-colors flex-shrink-0">
+                  <X size={18} />
+                </button>
+                <h3 className="font-bold text-pink-400">{t.conversation}</h3>
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-4 kawaii-scroll bg-stone-50 dark:bg-zinc-950">
                 {gameState.hints.map((hint, idx) => (
@@ -775,7 +795,7 @@ export default function App() {
                   disabled={loading}
                   className="w-full bg-pink-700 text-white py-3 rounded-xl font-bold shadow-[0_4px_0_rgb(190,24,93)] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50 hover:bg-pink-600"
                 >
-                  Ask for a hint
+                  {t.askHint}
                 </button>
               </div>
             </div>
@@ -786,9 +806,9 @@ export default function App() {
         {showEasterEggIntro && (
           <div className="absolute inset-0 z-[100] bg-stone-50 dark:bg-black flex items-center justify-center overflow-hidden">
             <div className="flex flex-col items-center gap-8">
-              <h2 className="text-4xl font-black text-pink-500 animate-spin-slow">SURPRISE INCOMING!</h2>
+              <h2 className="text-4xl font-black text-pink-500 animate-spin-slow">{t.easterEggTitle}</h2>
               <div className="text-6xl animate-bounce-crazy">🎁✨💖</div>
-              <p className="text-stone-900 dark:text-white text-xl animate-pulse">Wait for it...</p>
+              <p className="text-stone-900 dark:text-white text-xl animate-pulse">{t.easterEggWait}</p>
             </div>
             <style dangerouslySetInnerHTML={{ __html: `
               @keyframes spin-slow {
@@ -866,22 +886,22 @@ export default function App() {
                 )}
               </div>
               <h2 className={`text-3xl font-bold mb-2 ${gameState.status === 'won' ? 'text-pink-500 dark:text-pink-400' : 'text-stone-500 dark:text-zinc-400'}`}>
-                {gameState.status === 'won' ? "You did it omg!!" : "Oh no... 😭"}
+                {gameState.status === 'won' ? t.wonTitle : t.lostTitle}
               </h2>
               <p className="text-stone-500 dark:text-zinc-400 mb-6">
-                The word was <span className="font-bold text-stone-900 dark:text-white">{gameState.word}</span>.
-                {gameState.status === 'won' ? " You're literally a genius." : " Don't cry, we can try again."}
+                {t.wordWas} <span className="font-bold text-stone-900 dark:text-white">{gameState.word}</span>.
+                {gameState.status === 'won' ? ` ${t.wonSub}` : ` ${t.lostSub}`}
               </p>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <button onClick={handleReplay} className="bg-pink-700 text-white py-3 rounded-xl font-bold shadow-[0_4px_0_rgb(190,24,93)] active:translate-y-[4px] active:shadow-none flex items-center justify-center gap-2 hover:bg-pink-600">
-                  <RotateCcw size={18} /> Replay
+                  <RotateCcw size={18} /> {t.replay}
                 </button>
                 <button onClick={() => copyLinkToClipboard(setModalCopySuccess)} className="bg-green-700 text-white py-3 rounded-xl font-bold shadow-[0_4px_0_rgb(22,163,74)] active:translate-y-[4px] active:shadow-none flex items-center justify-center gap-2 transition-all hover:bg-green-600">
-                  {modalCopySuccess ? <Check size={18} /> : <Copy size={18} />} {modalCopySuccess ? "Copied!" : "Copy Link"}
+                  {modalCopySuccess ? <Check size={18} /> : <Copy size={18} />} {modalCopySuccess ? t.copied : t.copyLink}
                 </button>
               </div>
               <button onClick={() => setMode(GameMode.MENU)} className="w-full bg-stone-100 dark:bg-zinc-800 text-stone-600 dark:text-zinc-400 py-3 rounded-xl font-bold hover:bg-stone-200 dark:hover:bg-zinc-700">
-                Back to Menu
+                {t.backToMenu}
               </button>
             </div>
           </div>

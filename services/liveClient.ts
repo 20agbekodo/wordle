@@ -2,6 +2,7 @@ import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SYSTEM_INSTRUCTION_LIVE_BOY, SYSTEM_INSTRUCTION_LIVE_GIRL } from "../constants";
 import { CharacterType } from "../types";
 import { getStoredApiKey, isAuthOrRateLimitError, clearStoredApiKey } from "./apiKeyService";
+import { Language, LANGUAGE_NAMES } from "../i18n/translations";
 
 let session: any = null;
 let inputAudioContext: AudioContext | null = null;
@@ -104,7 +105,8 @@ async function decodeAudioData(
 export const connectLiveSession = async (
   character: CharacterType,
   word: string,
-  onDisconnect: () => void
+  onDisconnect: () => void,
+  language: Language = 'en'
 ) => {
   await disconnectLiveSession();
 
@@ -138,7 +140,8 @@ export const connectLiveSession = async (
   }
   
   const instructionTemplate = character === 'girl' ? SYSTEM_INSTRUCTION_LIVE_GIRL : SYSTEM_INSTRUCTION_LIVE_BOY;
-  const systemInstruction = instructionTemplate.replace('{{WORD}}', word);
+  const langInstruction = language !== 'en' ? `\nIMPORTANT: You MUST speak exclusively in ${LANGUAGE_NAMES[language]}. All your responses must be in ${LANGUAGE_NAMES[language]}.` : '';
+  const systemInstruction = instructionTemplate.replace('{{WORD}}', word) + langInstruction;
   const voiceName = character === 'girl' ? 'Kore' : 'Puck';
 
   const sessionPromise = ai.live.connect({

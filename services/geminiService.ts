@@ -2,6 +2,7 @@ import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/gen
 import { SYSTEM_INSTRUCTION_TEXT } from "../constants";
 import { CharacterType, Hint } from "../types";
 import { getStoredApiKey, isAuthOrRateLimitError, clearStoredApiKey } from "./apiKeyService";
+import { Language, LANGUAGE_NAMES } from "../i18n/translations";
 
 const safetySettings = [
   { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -16,22 +17,25 @@ const DIFFICULTY_HINT_INSTRUCTION: Record<number, string> = {
   3: "DIFFICULTY — Smart-ass: Be EXTREMELY evasive and cryptic. Your hints must technically relate to the word but be so oblique, poetic, and abstract that they're nearly useless as clues. Be teasing and philosophical. The player asked for pain — deliver.",
 };
 
-export const generateQuickGame = async (difficulty: 1 | 2 | 3 = 2): Promise<{ word: string; hint: string }> => {
+export const generateQuickGame = async (difficulty: 1 | 2 | 3 = 2, language: Language = 'en'): Promise<{ word: string; hint: string }> => {
   const apiKey = getStoredApiKey();
   if (!apiKey) return { word: "VIBES", hint: "It's all about the energy, omg!" };
 
+  const langName = LANGUAGE_NAMES[language];
   const wordComplexity =
     difficulty === 1
-      ? "Choose a simple, very common 5-letter English word (e.g. HEART, SMILE, HAPPY, SUNNY, SWEET)."
+      ? `Choose a simple, very common 5-letter ${langName} word.`
       : difficulty === 2
-      ? "Choose a fun, unusual word or current American slang (e.g. SIMP, VIBES, CRINGE, SALTY, GOOFY)."
-      : "Choose an obscure or deceptively tricky word — something with misleading double meanings or that would stump an expert.";
+      ? `Choose a fun, unusual or colloquial ${langName} word.`
+      : `Choose an obscure or deceptively tricky ${langName} word — something with misleading double meanings or that would stump an expert.`;
+
+  const langInstruction = `The word MUST be a valid ${langName} word. The hint MUST be written in ${langName}.`;
 
   const ai = new GoogleGenAI({ apiKey });
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: `Generate a random 5 or 6 letter English word for a Wordle game. The word MUST be exactly 5 or 6 letters. ${wordComplexity} Also provide a first hint that matches this difficulty: ${DIFFICULTY_HINT_INSTRUCTION[difficulty]}`,
+      contents: `Generate a random 5 or 6 letter word for a Wordle game. The word MUST be exactly 5 or 6 letters. ${wordComplexity} ${langInstruction} Also provide a first hint that matches this difficulty: ${DIFFICULTY_HINT_INSTRUCTION[difficulty]}`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -67,7 +71,8 @@ export const generateHint = async (
   history: Hint[],
   nextSpeaker: CharacterType,
   difficulty: 1 | 2 | 3 = 2,
-  context?: string
+  context?: string,
+  language: Language = 'en'
 ): Promise<string> => {
   const apiKey = getStoredApiKey();
   if (!apiKey) return "Let me tell you something...";
@@ -97,12 +102,14 @@ Generate a single short sentence (max 20 words) as the ${nextSpeaker}.
 Talk to the other character in a cute, kawaii way. Do NOT reveal the word. Follow the difficulty instruction strictly.
   `.trim();
 
+  const langInstruction = language !== 'en' ? `\nIMPORTANT: You MUST respond exclusively in ${LANGUAGE_NAMES[language]}.` : '';
+
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
       config: {
-        systemInstruction: SYSTEM_INSTRUCTION_TEXT,
+        systemInstruction: SYSTEM_INSTRUCTION_TEXT + langInstruction,
         safetySettings,
       },
     });
